@@ -1,19 +1,10 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
+from api.health import router as health_router
+from api.profile import router as profile_router
+from api.recommendations import router as recommendations_router
 
-app = FastAPI(title="Cultural IA Assistant API", version="0.1.0")
+app = FastAPI()
 
-
-class HealthResponse(BaseModel):
-    status: str
-    service: str
-
-
-@app.get("/health", response_model=HealthResponse)
-def health() -> HealthResponse:
-    return HealthResponse(status="ok", service="backend")
-
-
-@app.get("/")
-def root() -> dict[str, str]:
-    return {"message": "Cultural IA Assistant API"}
+app.include_router(health_router)
+app.include_router(profile_router)
+app.include_router(recommendations_router)
