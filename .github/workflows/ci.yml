@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    name: Sintaxe Python
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/app
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+      - name: Instalar dependências bloqueadas
+        run: uv sync --locked
+      - name: Compilar o código Python
+        run: uv run python -m compileall -q .
+
+  lint:
+    name: Qualidade estática
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+      - name: Executar Ruff
+        run: uvx ruff check backend/app --output-format=github
+
+  smoke-test:
+    name: Aplicação inicializa
+    runs-on: ubuntu-latest
+    needs: syntax
+    defaults:
+      run:
+        working-directory: backend/app
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+      - name: Instalar dependências bloqueadas
+        run: uv sync --locked
+      - name: Iniciar a API e verificar healthcheck
+        env:
+          TICKETMASTER_API_KEY: ci-placeholder
+        run: |
+          uv run uvicorn main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+
+          for attempt in {1..10}; do
+            if curl --fail --silent http://127.0.0.1:8000/healthcheck; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat server.log
+          exit 1
+
+  secrets:
+    name: Arquivos e segredos sensíveis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Bloquear arquivos de ambiente versionados
+        shell: bash
+        run: |
+          forbidden_files="$(git ls-files | grep -E '(^|/)\.env($|\.)' | grep -Ev '(^|/)\.env\.example$' || true)"
+          if [[ -n "$forbidden_files" ]]; then
+            echo "Arquivos de ambiente não podem ser versionados:"
+            echo "$forbidden_files"
+            exit 1
+          fi
+      - name: Detectar chaves, tokens e senhas expostos
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
