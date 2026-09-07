@@ -1,0 +1,383 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cultural AI Assistant API",
+    "version": "1.0.0-draft",
+    "description": "Contrato de API proposto. Os endpoints marcados como pós-MVP não fazem parte da primeira entrega."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/api/v1",
+      "description": "Desenvolvimento local"
+    }
+  ],
+  "tags": [
+    {"name": "Health", "description": "Verificações de disponibilidade."},
+    {"name": "Events", "description": "Descoberta e consulta de eventos."},
+    {"name": "Categories", "description": "Categorias padronizadas de eventos."},
+    {"name": "Visitor sessions", "description": "Sessões anônimas e favoritos temporários."},
+    {"name": "Authentication", "description": "Recursos previstos para pós-MVP."},
+    {"name": "Profile", "description": "Perfil cultural previsto para pós-MVP."},
+    {"name": "Recommendations", "description": "Personalização prevista para pós-MVP."}
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Consultar saúde da API",
+        "operationId": "getHealth",
+        "x-scope": "mvp",
+        "responses": {
+          "200": {
+            "description": "API disponível.",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HealthResponse"}}}
+          }
+        }
+      }
+    },
+    "/events": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "Buscar eventos",
+        "description": "Retorna eventos normalizados de acordo com texto, localização, data, categoria, preço e ordenação.",
+        "operationId": "searchEvents",
+        "x-scope": "mvp",
+        "parameters": [
+          {"$ref": "#/components/parameters/Query"},
+          {"$ref": "#/components/parameters/City"},
+          {"$ref": "#/components/parameters/Category"},
+          {"$ref": "#/components/parameters/Latitude"},
+          {"$ref": "#/components/parameters/Longitude"},
+          {"$ref": "#/components/parameters/RadiusKm"},
+          {"$ref": "#/components/parameters/StartsAt"},
+          {"$ref": "#/components/parameters/EndsAt"},
+          {"$ref": "#/components/parameters/MaxPrice"},
+          {"$ref": "#/components/parameters/Sort"},
+          {"$ref": "#/components/parameters/Page"},
+          {"$ref": "#/components/parameters/PageSize"}
+        ],
+        "responses": {
+          "200": {"description": "Eventos encontrados.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/EventSearchResponse"}}}},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "422": {"$ref": "#/components/responses/ValidationError"},
+          "502": {"$ref": "#/components/responses/EventSourceUnavailable"}
+        }
+      }
+    },
+    "/events/{eventId}": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "Consultar detalhes de um evento",
+        "operationId": "getEventById",
+        "x-scope": "mvp",
+        "parameters": [{"$ref": "#/components/parameters/EventId"}],
+        "responses": {
+          "200": {"description": "Evento encontrado.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Event"}}}},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/categories": {
+      "get": {
+        "tags": ["Categories"],
+        "summary": "Listar categorias de eventos",
+        "operationId": "listCategories",
+        "x-scope": "mvp",
+        "responses": {
+          "200": {"description": "Categorias ativas.", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/Category"}}}}}
+        }
+      }
+    },
+    "/visitor-sessions": {
+      "post": {
+        "tags": ["Visitor sessions"],
+        "summary": "Criar uma sessão visitante",
+        "description": "Inicia uma sessão anônima para suportar favoritos temporários. Não deve receber dados pessoais no MVP.",
+        "operationId": "createVisitorSession",
+        "x-scope": "mvp",
+        "requestBody": {
+          "required": false,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VisitorSessionCreateRequest"}}}
+        },
+        "responses": {
+          "201": {"description": "Sessão criada.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VisitorSession"}}}},
+          "422": {"$ref": "#/components/responses/ValidationError"}
+        }
+      }
+    },
+    "/visitor-sessions/{sessionId}/favorites": {
+      "get": {
+        "tags": ["Visitor sessions"],
+        "summary": "Listar favoritos temporários",
+        "operationId": "listTemporaryFavorites",
+        "x-scope": "mvp",
+        "parameters": [{"$ref": "#/components/parameters/SessionId"}],
+        "responses": {
+          "200": {"description": "Favoritos da sessão.", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/TemporaryFavorite"}}}}},
+          "404": {"$ref": "#/components/responses/SessionNotFound"}
+        }
+      },
+      "post": {
+        "tags": ["Visitor sessions"],
+        "summary": "Adicionar evento aos favoritos temporários",
+        "operationId": "createTemporaryFavorite",
+        "x-scope": "mvp",
+        "parameters": [{"$ref": "#/components/parameters/SessionId"}],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TemporaryFavoriteCreateRequest"}}}
+        },
+        "responses": {
+          "201": {"description": "Favorito criado.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TemporaryFavorite"}}}},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "409": {"$ref": "#/components/responses/Conflict"},
+          "422": {"$ref": "#/components/responses/ValidationError"}
+        }
+      }
+    },
+    "/visitor-sessions/{sessionId}/favorites/{eventId}": {
+      "delete": {
+        "tags": ["Visitor sessions"],
+        "summary": "Remover favorito temporário",
+        "operationId": "deleteTemporaryFavorite",
+        "x-scope": "mvp",
+        "parameters": [
+          {"$ref": "#/components/parameters/SessionId"},
+          {"$ref": "#/components/parameters/EventId"}
+        ],
+        "responses": {
+          "204": {"description": "Favorito removido."},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Criar conta",
+        "operationId": "registerUser",
+        "x-scope": "post-mvp",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RegistrationRequest"}}}},
+        "responses": {
+          "201": {"description": "Conta criada.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AuthToken"}}}},
+          "409": {"$ref": "#/components/responses/Conflict"},
+          "422": {"$ref": "#/components/responses/ValidationError"}
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Autenticar usuário",
+        "operationId": "login",
+        "x-scope": "post-mvp",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/LoginRequest"}}}},
+        "responses": {
+          "200": {"description": "Autenticação bem-sucedida.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AuthToken"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "422": {"$ref": "#/components/responses/ValidationError"}
+        }
+      }
+    },
+    "/me/profile": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Consultar perfil cultural",
+        "operationId": "getMyProfile",
+        "x-scope": "post-mvp",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {"description": "Perfil encontrado.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CulturalProfile"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      },
+      "put": {
+        "tags": ["Profile"],
+        "summary": "Criar ou atualizar perfil cultural",
+        "operationId": "upsertMyProfile",
+        "x-scope": "post-mvp",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CulturalProfileUpsertRequest"}}}},
+        "responses": {
+          "200": {"description": "Perfil atualizado.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CulturalProfile"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "422": {"$ref": "#/components/responses/ValidationError"}
+        }
+      }
+    },
+    "/me/interactions": {
+      "post": {
+        "tags": ["Recommendations"],
+        "summary": "Registrar interação com evento",
+        "operationId": "createInteraction",
+        "x-scope": "post-mvp",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/InteractionCreateRequest"}}}},
+        "responses": {
+          "201": {"description": "Interação registrada.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Interaction"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "422": {"$ref": "#/components/responses/ValidationError"}
+        }
+      }
+    },
+    "/me/recommendations": {
+      "get": {
+        "tags": ["Recommendations"],
+        "summary": "Listar recomendações personalizadas",
+        "operationId": "listMyRecommendations",
+        "x-scope": "post-mvp",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/Page"},
+          {"$ref": "#/components/parameters/PageSize"}
+        ],
+        "responses": {
+          "200": {"description": "Recomendações recentes.", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RecommendationListResponse"}}}},
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT", "description": "Previsto para pós-MVP; a tecnologia final depende da ADR de autenticação futura."}
+    },
+    "parameters": {
+      "EventId": {"name": "eventId", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}, "description": "Identificador interno do evento."},
+      "SessionId": {"name": "sessionId", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}, "description": "Identificador da sessão visitante."},
+      "Query": {"name": "q", "in": "query", "schema": {"type": "string", "maxLength": 120}, "description": "Termo livre de busca."},
+      "City": {"name": "city", "in": "query", "schema": {"type": "string", "maxLength": 120}, "description": "Cidade de referência."},
+      "Category": {"name": "category", "in": "query", "schema": {"type": "string"}, "description": "Slug de uma categoria."},
+      "Latitude": {"name": "latitude", "in": "query", "schema": {"type": "number", "minimum": -90, "maximum": 90}, "description": "Latitude do ponto de referência; exige longitude."},
+      "Longitude": {"name": "longitude", "in": "query", "schema": {"type": "number", "minimum": -180, "maximum": 180}, "description": "Longitude do ponto de referência; exige latitude."},
+      "RadiusKm": {"name": "radiusKm", "in": "query", "schema": {"type": "number", "exclusiveMinimum": 0, "maximum": 300, "default": 20}, "description": "Raio máximo em quilômetros; exige latitude e longitude."},
+      "StartsAt": {"name": "startsAt", "in": "query", "schema": {"type": "string", "format": "date-time"}, "description": "Início do intervalo, em ISO 8601."},
+      "EndsAt": {"name": "endsAt", "in": "query", "schema": {"type": "string", "format": "date-time"}, "description": "Fim do intervalo, em ISO 8601."},
+      "MaxPrice": {"name": "maxPrice", "in": "query", "schema": {"type": "number", "minimum": 0}, "description": "Preço máximo na moeda retornada pelo evento."},
+      "Sort": {"name": "sort", "in": "query", "schema": {"type": "string", "enum": ["relevance", "date", "distance", "price"], "default": "relevance"}, "description": "Critério de ordenação."},
+      "Page": {"name": "page", "in": "query", "schema": {"type": "integer", "minimum": 1, "default": 1}, "description": "Página solicitada."},
+      "PageSize": {"name": "pageSize", "in": "query", "schema": {"type": "integer", "minimum": 1, "maximum": 50, "default": 20}, "description": "Quantidade de itens por página."}
+    },
+    "responses": {
+      "BadRequest": {"description": "Parâmetros incompatíveis ou regra de negócio inválida.", "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/Problem"}}}},
+      "Unauthorized": {"description": "Token ausente, inválido ou expirado.", "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/Problem"}}}},
+      "NotFound": {"description": "Recurso não encontrado.", "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/Problem"}}}},
+      "SessionNotFound": {"description": "Sessão visitante inexistente ou expirada.", "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/Problem"}}}},
+      "Conflict": {"description": "Conflito de estado, como recurso duplicado.", "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/Problem"}}}},
+      "ValidationError": {"description": "Corpo ou parâmetros inválidos.", "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/Problem"}}}},
+      "EventSourceUnavailable": {"description": "A fonte de eventos não pôde ser consultada.", "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/Problem"}}}}
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status", "timestamp"],
+        "properties": {"status": {"type": "string", "const": "ok"}, "timestamp": {"type": "string", "format": "date-time"}}
+      },
+      "Category": {
+        "type": "object",
+        "required": ["id", "name", "slug"],
+        "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}, "slug": {"type": "string"}, "description": {"type": "string"}}
+      },
+      "Location": {
+        "type": "object",
+        "required": ["city", "country"],
+        "properties": {
+          "name": {"type": "string"}, "city": {"type": "string"}, "state": {"type": "string"}, "country": {"type": "string"}, "address": {"type": "string"}, "latitude": {"type": "number"}, "longitude": {"type": "number"}
+        }
+      },
+      "Money": {
+        "type": "object",
+        "required": ["amount", "currency"],
+        "properties": {"amount": {"type": "number", "minimum": 0}, "currency": {"type": "string", "pattern": "^[A-Z]{3}$", "example": "BRL"}}
+      },
+      "Event": {
+        "type": "object",
+        "required": ["id", "title", "startsAt", "categories", "location"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"}, "title": {"type": "string"}, "description": {"type": "string"}, "startsAt": {"type": "string", "format": "date-time"}, "endsAt": {"type": "string", "format": "date-time"}, "categories": {"type": "array", "items": {"$ref": "#/components/schemas/Category"}}, "location": {"$ref": "#/components/schemas/Location"}, "price": {"$ref": "#/components/schemas/Money"}, "sourceUrl": {"type": "string", "format": "uri"}, "imageUrl": {"type": "string", "format": "uri"}, "distanceKm": {"type": "number", "minimum": 0}
+        }
+      },
+      "EventSearchResponse": {
+        "type": "object",
+        "required": ["items", "page", "pageSize", "total"],
+        "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/Event"}}, "page": {"type": "integer"}, "pageSize": {"type": "integer"}, "total": {"type": "integer", "minimum": 0}}
+      },
+      "VisitorSessionCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {"context": {"type": "object", "additionalProperties": true, "description": "Contexto não pessoal e opcional, como cidade de busca."}}
+      },
+      "VisitorSession": {
+        "type": "object",
+        "required": ["id", "startedAt", "expiresAt"],
+        "properties": {"id": {"type": "string", "format": "uuid"}, "startedAt": {"type": "string", "format": "date-time"}, "expiresAt": {"type": "string", "format": "date-time"}}
+      },
+      "TemporaryFavoriteCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["eventId"],
+        "properties": {"eventId": {"type": "string", "format": "uuid"}}
+      },
+      "TemporaryFavorite": {
+        "type": "object",
+        "required": ["id", "sessionId", "event", "createdAt"],
+        "properties": {"id": {"type": "string", "format": "uuid"}, "sessionId": {"type": "string", "format": "uuid"}, "event": {"$ref": "#/components/schemas/Event"}, "createdAt": {"type": "string", "format": "date-time"}}
+      },
+      "RegistrationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "email", "password"],
+        "properties": {"name": {"type": "string", "minLength": 2, "maxLength": 120}, "email": {"type": "string", "format": "email"}, "password": {"type": "string", "format": "password", "minLength": 12, "maxLength": 128}}
+      },
+      "LoginRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["email", "password"],
+        "properties": {"email": {"type": "string", "format": "email"}, "password": {"type": "string", "format": "password"}}
+      },
+      "AuthToken": {
+        "type": "object",
+        "required": ["accessToken", "tokenType", "expiresIn"],
+        "properties": {"accessToken": {"type": "string"}, "tokenType": {"type": "string", "const": "Bearer"}, "expiresIn": {"type": "integer", "minimum": 1}}
+      },
+      "CulturalProfileUpsertRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {"referenceCity": {"type": "string", "maxLength": 120}, "budgetMin": {"type": "number", "minimum": 0}, "budgetMax": {"type": "number", "minimum": 0}, "categoryIds": {"type": "array", "items": {"type": "string", "format": "uuid"}, "uniqueItems": true}, "interestIds": {"type": "array", "items": {"type": "string", "format": "uuid"}, "uniqueItems": true}}
+      },
+      "CulturalProfile": {
+        "type": "object",
+        "required": ["id", "userId", "categoryIds", "interestIds", "updatedAt"],
+        "properties": {"id": {"type": "string", "format": "uuid"}, "userId": {"type": "string", "format": "uuid"}, "referenceCity": {"type": "string"}, "budgetMin": {"type": "number"}, "budgetMax": {"type": "number"}, "categoryIds": {"type": "array", "items": {"type": "string", "format": "uuid"}}, "interestIds": {"type": "array", "items": {"type": "string", "format": "uuid"}}, "updatedAt": {"type": "string", "format": "date-time"}}
+      },
+      "InteractionCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["eventId", "type"],
+        "properties": {"eventId": {"type": "string", "format": "uuid"}, "type": {"type": "string", "enum": ["search", "view", "favorite", "remove_favorite", "positive_feedback", "negative_feedback"]}, "metadata": {"type": "object", "additionalProperties": true}}
+      },
+      "Interaction": {
+        "type": "object",
+        "required": ["id", "userId", "eventId", "type", "occurredAt"],
+        "properties": {"id": {"type": "string", "format": "uuid"}, "userId": {"type": "string", "format": "uuid"}, "eventId": {"type": "string", "format": "uuid"}, "type": {"type": "string"}, "occurredAt": {"type": "string", "format": "date-time"}}
+      },
+      "Recommendation": {
+        "type": "object",
+        "required": ["id", "event", "score", "generatedAt"],
+        "properties": {"id": {"type": "string", "format": "uuid"}, "event": {"$ref": "#/components/schemas/Event"}, "score": {"type": "number"}, "rationale": {"type": "string"}, "generatedAt": {"type": "string", "format": "date-time"}, "expiresAt": {"type": "string", "format": "date-time"}}
+      },
+      "RecommendationListResponse": {
+        "type": "object",
+        "required": ["items", "page", "pageSize", "total"],
+        "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/Recommendation"}}, "page": {"type": "integer"}, "pageSize": {"type": "integer"}, "total": {"type": "integer", "minimum": 0}}
+      },
+      "Problem": {
+        "type": "object",
+        "required": ["type", "title", "status"],
+        "properties": {"type": {"type": "string", "format": "uri-reference", "example": "https://api.cultural-ai.example/problems/validation-error"}, "title": {"type": "string"}, "status": {"type": "integer"}, "detail": {"type": "string"}, "instance": {"type": "string", "format": "uri-reference"}, "errors": {"type": "array", "items": {"type": "object", "required": ["field", "message"], "properties": {"field": {"type": "string"}, "message": {"type": "string"}}}}}
+      }
+    }
+  }
+}
