@@ -25,7 +25,7 @@ Criar uma plataforma inteligente capaz de recomendar eventos, shows, apresentaç
 A experiência do produto deve contemplar dois fluxos principais:
 
 1. Fluxo casual / visitante: o usuário pode explorar a aplicação de forma esporádica, conhecer uma cidade ou descobrir eventos sem precisar criar conta.
-2. Fluxo autenticado: o usuário pode fazer login somente após o MVP para que o sistema reconheça seu perfil, preferências e interesses, oferecendo recomendações mais relevantes e, em etapas posteriores, notificações periódicas sobre eventos próximos.
+2. Fluxo autenticado: o usuário pode fazer login somente após o MVP para que o sistema reconheça seu perfil, preferências e interesses, oferecendo recomendações mais relevantes e, em etapas posteriores, notificações periódicas sobre eventos próximos podendo integrar com a agenda do usuário para adicionar o evento.
 
 O projeto possui dois objetivos simultâneos:
 
@@ -157,7 +157,8 @@ Pessoa visitando uma cidade e buscando atividades relevantes próximas.
 * Adicionar
 * Remover
 * Consultar
-* Em modo casual, os favoritos podem funcionar como lista temporária e ser sincronizados após login, em uma fase futura
+* Em modo casual, os favoritos podem funcionar como lista temporária e ser sincronizados após login, em uma fase futura.
+* Tanto em modo casual quanto em modo login, é possível clicar em opção "compartilhar evento"e "adicionar evento em agenda".
 
 ---
 
